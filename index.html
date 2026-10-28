@@ -240,5 +240,110 @@ window.openProviderForm = function () {
 Then tell me **“Saved”**. We’ll test a registration and check whether it reaches Supabase before moving on to bookings.
 
 **Important:** This uses your publishable key, not your secret key. A successful submission should be stored as pending review; it won’t automatically appear in public listings yet.
+  
+<script>
+window.openBooking = function(id) {
+  const p = findProvider(id);
+  if (!p) return;
+
+  document.getElementById("modalTitle").textContent = "Request a booking";
+  document.getElementById("modalContent").innerHTML = `
+    <p>Requesting: <strong>${escapeHtml(p.name)}</strong></p>
+    <form id="liveBookingForm">
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Your name</label>
+          <input class="field" id="bName" required maxlength="80">
+        </div>
+        <div class="form-row">
+          <label>Phone number</label>
+          <input class="field" id="bPhone" required type="tel" maxlength="20">
+        </div>
+        <div class="form-row full">
+          <label>Preferred date</label>
+          <input class="field" id="bDate" required type="date"
+            min="${new Date().toISOString().slice(0,10)}">
+        </div>
+        <div class="form-row full">
+          <label>Preferred time</label>
+          <select class="field" id="bTime" required>
+            <option value="">Choose time</option>
+            <option>Morning</option>
+            <option>Afternoon</option>
+            <option>Evening</option>
+          </select>
+        </div>
+        <div class="form-row full">
+          <label>Service needed</label>
+          <select class="field" id="bService" required>
+            ${p.services.map(s => `<option>${escapeHtml(s)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-row full">
+          <label>Extra details (optional)</label>
+          <textarea class="field" id="bNotes" maxlength="500"></textarea>
+        </div>
+      </div>
+      <p id="bookingStatus" class="smallprint"></p>
+      <div class="form-actions">
+        <button type="button" class="btn secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn dark" id="bookingSubmit" type="submit">Send request</button>
+      </div>
+    </form>`;
+
+  document.getElementById("liveBookingForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const btn = document.getElementById("bookingSubmit");
+    const status = document.getElementById("bookingStatus");
+    btn.disabled = true;
+    status.textContent = "Sending request...";
+
+    const service = document.getElementById("bService").value;
+    const time = document.getElementById("bTime").value;
+
+    const record = {
+      provider_id: null,
+      customer_name: document.getElementById("bName").value.trim(),
+      customer_phone: document.getElementById("bPhone").value.trim(),
+      service_requested: p.name + " — " + service + " (" + time + ")",
+      booking_date: document.getElementById("bDate").value,
+      notes: document.getElementById("bNotes").value.trim(),
+      status: "pending"
+    };
+
+    try {
+      const response = await fetch(
+        "https://shjkbicyirngnccqnpie.supabase.co/rest/v1/bookings",
+        {
+          method: "POST",
+          headers: {
+            "apikey": "sb_publishable_J35svqircDwct7gFhArbHA_9v3hlh-G",
+            "Authorization": "Bearer sb_publishable_J35svqircDwct7gFhArbHA_9v3hlh-G",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+          },
+          body: JSON.stringify(record)
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || error.details || "Request failed (" + response.status + ")");
+      }
+
+      status.textContent = "Booking request saved successfully.";
+      toast("Booking request sent.");
+      document.getElementById("liveBookingForm").reset();
+    } catch (error) {
+      status.textContent = "Could not save request: " + error.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  openModal();
+};
+</script>
+  
 </body>
 </html>
