@@ -100,5 +100,145 @@ function closeModal(){document.getElementById("modalBackdrop").classList.remove(
 let toastTimer;function toast(msg){let t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),3200)}
 init();
 </script>
+  
+<script>
+const MTAA_SUPABASE_URL = "https://shjkbicyirngnccqnpie.supabase.co";
+const MTAA_SUPABASE_KEY = "sb_publishable_J35svqircDwct7gFhArbHA_9v3hlh-G";
+
+window.openProviderForm = function () {
+  document.getElementById("modalTitle").textContent = "Register your business";
+
+  document.getElementById("modalContent").innerHTML = `
+    <p class="smallprint">Submit your business for review. It will not appear publicly until approved.</p>
+    <form id="providerForm">
+      <div class="form-grid">
+        <div class="form-row full">
+          <label>Business name</label>
+          <input class="field" id="pName" required maxlength="100">
+        </div>
+        <div class="form-row">
+          <label>Owner's name</label>
+          <input class="field" id="pOwner" required maxlength="100">
+        </div>
+        <div class="form-row">
+          <label>Phone number</label>
+          <input class="field" id="pPhone" type="tel" required maxlength="20">
+        </div>
+        <div class="form-row">
+          <label>Category</label>
+          <select class="field" id="pCategory" required>
+            ${categories.filter(c => c.name !== "All services").map(c => `<option>${c.name}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-row">
+          <label>County</label>
+          <select class="field" id="pCounty" required>
+            ${counties.map(c => `<option>${c}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-row full">
+          <label>Town / area</label>
+          <input class="field" id="pTown" required maxlength="80">
+        </div>
+        <div class="form-row full">
+          <label>Starting price (KSh)</label>
+          <input class="field" id="pPrice" type="number" required min="0" max="10000000">
+        </div>
+        <div class="form-row full">
+          <label>Describe your business</label>
+          <textarea class="field" id="pDesc" required maxlength="300"></textarea>
+        </div>
+        <div class="form-row full">
+          <label>Services offered (separate with commas)</label>
+          <input class="field" id="pServices" required maxlength="250">
+        </div>
+      </div>
+      <p id="providerStatus" class="smallprint"></p>
+      <div class="form-actions">
+        <button type="button" class="btn secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn dark" id="providerSubmit" type="submit">Submit business</button>
+      </div>
+    </form>`;
+
+  document.getElementById("providerForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById("providerSubmit");
+    const status = document.getElementById("providerStatus");
+    btn.disabled = true;
+    status.textContent = "Submitting...";
+
+    const category = document.getElementById("pCategory").value;
+    const county = document.getElementById("pCounty").value;
+    const town = document.getElementById("pTown").value.trim();
+    const price = Number(document.getElementById("pPrice").value);
+    const icons = {
+      "Beauty":"💇🏽‍♀️",
+      "Home services":"🧰",
+      "Cleaning":"🧹",
+      "Events":"📸",
+      "Auto services":"🚗",
+      "Lessons":"📚",
+      "Wellness":"🧘🏽"
+    };
+
+    const record = {
+      business_name: document.getElementById("pName").value.trim(),
+      owner_name: document.getElementById("pOwner").value.trim(),
+      phone: document.getElementById("pPhone").value.trim(),
+      service_category: category,
+      location: town + ", " + county + " County",
+      town: town,
+      description: document.getElementById("pDesc").value.trim(),
+      services: document.getElementById("pServices").value.trim(),
+      price: price,
+      icon: icons[category] || "🏪",
+      approved: false
+    };
+
+    try {
+      const response = await fetch(
+        MTAA_SUPABASE_URL + "/rest/v1/providers",
+        {
+          method: "POST",
+          headers: {
+            "apikey": MTAA_SUPABASE_KEY,
+            "Authorization": "Bearer " + MTAA_SUPABASE_KEY,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+          },
+          body: JSON.stringify(record)
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || error.details || "Request failed (" + response.status + ")");
+      }
+
+      status.textContent = "Business submitted successfully for review.";
+      toast("Business submitted for review.");
+      document.getElementById("providerForm").reset();
+    } catch (error) {
+      status.textContent = "Submission failed: " + error.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  openModal();
+};
+</script>
+```
+
+### Step 3 — Save the change
+
+1. Check that the new code is **above `</body>`**, not below it.
+2. Scroll to GitHub’s **Commit changes** button.
+3. Commit the changes to the `main` branch.
+
+Then tell me **“Saved”**. We’ll test a registration and check whether it reaches Supabase before moving on to bookings.
+
+**Important:** This uses your publishable key, not your secret key. A successful submission should be stored as pending review; it won’t automatically appear in public listings yet.
 </body>
 </html>
